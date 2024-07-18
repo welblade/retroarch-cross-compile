@@ -1,0 +1,29 @@
+# `sudo podman build --log-level=debug --squash --ulimit nofile=2048:2048 -f base/Containerfile -t arm64-base:latest` 
+FROM ubuntu:xenial AS base-xenial
+
+ARG uid
+LABEL description="Updated image with common packages"
+ENV TZ="America/Sao_Paulo"
+
+RUN /bin/sh -c set -ex \
+  && apt-get update \
+  && apt-get upgrade -y \
+  && apt-get install -y --no-install-recommends \
+    bzip2 \
+    g++ \
+    gawk \
+    gcc \
+    gpgv \
+    gpgv2 \
+    libncurses5-dev \
+    make \
+    meson \
+    ninja-build \
+    patch \
+    rsync \
+    software-properties-common \
+    unzip \
+    wget \
+    xz-utils \
+  && apt autoremove -y \
+  && rm -rf /var/lib/apt/lists/*

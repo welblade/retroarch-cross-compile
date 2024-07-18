@@ -1,34 +1,56 @@
-# retroarch-cross-compile
+This project is fork from zoltanvb's https://github.com/zoltanvb/retroarch-cross-compile, I made some changes to adapt to my needs.
 
-Container image configurations to enable cross-compilation of retroarch and libretro cores, where host is a generic x86-64 machine, and target is something else. Currently, armhf target is available.
+  * Containerfile more compatible with podman
+  * Compile to cores to Trimui Smart Pro
+  * Remove crosstool
 
-# armhf
-Image that can compile Retroarch and libretro cores for ARM hardfloat platforms. Tested with armv7. A snapshot of compiled cores can be found at:
-https://zoltanvb.github.io/armv7-hf-neon/
+# retroarch-cross-compile podman compatible 
+
+Container image configurations to enable cross-compilation of retroarch and libretro cores, where host is a generic x86-64 machine, and target is the trimui smart pro hndheld.
+
+# arm64-xenial
+Image that can compile Retroarch and libretro cores for ARM
 
 ## Building the image
-`cd armhf`  
-`docker build .`  
+`cd arm64-xenial`
+`sudo podman build --log-level=debug --squash --ulimit nofile=2048:2048 -f Containerfile -t arm64-focal:latest` 
+
+
 Note that build process will take a while (up to one hour), as it will include building a complete toolchain with crosstools-ng.
 
 Update for 2023-09: some packages have disappeared from xenial repositories, so libmpv and libsdl2 is now excluded from building.
 
 ## Using the image to build retroarch / cores
-Clone the repository to build (RetroArch, individual core, or even libretro-super), then:  
-`sudo docker run --rm -it -v "<cloned dir>:/build" <image name>`  
-`cd /build`  
+Clone the repository to build (RetroArch, individual core, or even libretro-super), then:
+`sudo podman run --rm -it -v "<cloned dir>:/build" <image name>`
+
+ex:
+`sudo podman run --rm -it -v ".:/developer:Z" localhost/arm64-focal:latest`
+
+`cd /build`
 Anything that you put under /build, will be preserved after you exit the container, others will be permanently lost.
+
 ### Building RetroArch
-`./configure --host=arm-linux-gnueabihf`  
+`./configure --host=aarch64-linux-gnu`  
 `make -j <CPU count of your builder machine>`  
 Note that there is no sense in doing "make install" inside the container. You will have the binary, but you can't execute it on your x86_64 host. But you can transfer the resulting binary to your ARM system, and run it there.
 
 ### Building cores with libretro-super
-`export JOBS=<CPU count of your builder machine>`  
-`export platform=linux-armv7-neon`  
+`export JOBS=<CPU count of your builder machine>`
+export CFLAGS="-mcpu=cortex-a53 -mtune=cortex-a53 -O3"
+`export platform=linux-arm64`  
 `./libretro-fetch.sh <core name>`  
 `./libretro-build.sh <core name>`  
-Note that this will produce a binary .so compiled with `platform=unix-armv7-hardfloat-neon`. Compiled library will be copied to `dist/unix`.
+Note that this will produce a binary .so compiled with `platform=unix-armv8-hardfloat-neon`. Compiled library will be copied to `dist/unix`.
+
+### building recipes (my fork of libreto-super)
+sudo podman run --rm -it -v ".:/developer:Z" localhost/arm64-xenial:latest
+export JOBS=<CPU count of your builder machine>
+export CFLAGS="-mcpu=cortex-a53 -mtune=cortex-a53 -O3"
+export CC=/usr/bin/aarch64-linux-gnu-gcc-
+export CXX=/usr/bin/aarch64-linux-gnu-g++
+FORCE=YES ./libretro-buildbot-recipe.sh recipes/linux/cores-linux-aarch64
+
 
 ### Building individual cores (or anything else)
 There are two sets of environment variables set up in the image. The default is the toolchain installed from Ubuntu:
